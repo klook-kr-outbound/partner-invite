@@ -38,6 +38,11 @@ h1{font-size:clamp(28px,8vw,36px);line-height:1.25;margin:0;font-weight:800;text
 .cta:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(70,0,10,.45)}
 .cta:focus-visible,.later:focus-visible{outline:3px solid #fff;outline-offset:3px}
 .btn:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.back{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.4);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.back[hidden]{display:none}
+.btn2{font:inherit;font-weight:700;background:#fff;color:var(--red);border:0;border-radius:10px;padding:11px;margin-top:6px;cursor:pointer}
+.btn2:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#signed.flash{outline:3px solid var(--gold);outline-offset:10px;border-radius:12px}
 .sub{font-size:13px;text-align:center;margin:0;opacity:.9}
 .later{background:none;border:0;color:#fff;opacity:.9;font:inherit;font-size:14px;text-decoration:underline;padding:8px;cursor:pointer;align-self:center}
 
@@ -180,7 +185,12 @@ textarea{resize:vertical;min-height:96px;line-height:1.5}
     </div>
 
     <p class="sub">가입만 하시면 상품 등록은 저희가 도와드려요.</p>
-    <a id="go" class="cta" href="#" rel="noopener">파트너 가입하기 <span aria-hidden="true">→</span></a>
+    <a id="go" class="cta" href="#" target="_blank" rel="noopener">파트너 가입하기 <span aria-hidden="true">→</span></a>
+    <div id="back" class="back" hidden role="status">
+      <b id="backT">가입 페이지가 새 탭에서 열렸어요.</b>
+      <span>가입을 마치면 이 탭으로 돌아와 이메일을 남겨 주세요.</span>
+      <button id="toForm" type="button" class="btn2">가입 완료, 이메일 남기기 ↓</button>
+    </div>
     <button id="later" class="later" type="button">지금은 어렵고, 나중에 볼게요</button>
   </div>
 </header>
@@ -190,7 +200,7 @@ textarea{resize:vertical;min-height:96px;line-height:1.5}
     <section>
       <h2>간편한 입점 진행 절차</h2>
       <ol class="list steps">
-        <li><div><b>파트너 가입하기 버튼 클릭 및 계정 신청</b><span>머천트 포털에서 기본 업체 정보를 입력하고 계정을 생성합니다.</span></div></li>
+        <li><div><b>파트너 가입하기 버튼 클릭 및 계정 신청</b><span>머천트 포털에서 기본 업체 정보를 입력하고 계정을 생성합니다.</span><small>가입 페이지는 새 탭에서 열립니다. 가입 후 이 페이지로 돌아와 아래에 이메일을 남겨 주세요.</small></div></li>
         <li><div><b>상품 세팅 무료 지원</b><span>계정 가입 완료 후 상품 정보만 전달해 주세요. 상품 페이지 제작 및 등록을 클룩에서 직접 지원하여 등록 부담을 덜어드립니다.</span></div></li>
       </ol>
     </section>
@@ -213,7 +223,7 @@ textarea{resize:vertical;min-height:96px;line-height:1.5}
       <p class="note">※ 안내 사항<br>상기 내용은 2026년 파트너사 지원 사례이며, 프로모션의 세부 진행 여부 및 지원 조건은 시즌 및 내부 운영 정책에 따라 변경될 수 있습니다.</p>
     </section>
 
-    <section>
+    <section id="signed">
       <h2>가입하셨나요?</h2>
       <form id="f">
         <label for="em">가입 이메일 주소</label>
@@ -286,7 +296,33 @@ var engaged = false;
 document.getElementById("go").addEventListener("click", function (e) {
   var human = e.isTrusted && ms() >= CONFIG.MIN_HUMAN_MS;
   log("portal_click", { label: human ? "human" : "suspect", trusted: e.isTrusted });
+  if (e.isTrusted) { clicked = true; remember(); showBack(false); }
 });
+
+/* ===== 새 탭으로 간 뒤 이 탭으로 돌아오게 하는 장치 ===== */
+var clicked = false, submitted = false, returned = false;
+var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function remember() { try { localStorage.setItem("kp_portal_click", String(Date.now())); } catch (e) {} }
+function showBack(again) {
+  document.getElementById("back").hidden = false;
+  if (again) document.getElementById("backT").textContent = "가입을 마치셨나요?";
+}
+function goForm() {
+  var el = document.getElementById("signed");
+  el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  el.classList.add("flash");
+  setTimeout(function () { el.classList.remove("flash"); }, 2200);
+}
+document.getElementById("toForm").addEventListener("click", goForm);
+/* 이 탭이 다시 보이면(가입 탭에서 돌아오면) 입력란으로 자동 이동 */
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "visible" && clicked && !submitted) {
+    if (!returned) { returned = true; log("returned"); }
+    goForm();
+  }
+});
+/* 이 탭을 새로고침/재방문해도 안내 유지 */
+try { if (localStorage.getItem("kp_portal_click")) showBack(true); } catch (e) {}
 
 document.getElementById("later").addEventListener("click", function (e) {
   log("interest_later", { trusted: e.isTrusted });
@@ -298,6 +334,7 @@ document.getElementById("f").addEventListener("submit", function (e) {
   e.preventDefault();
   var v = document.getElementById("em").value.trim();
   if (!v) return;
+  submitted = true;
   log("email_submit", { email: v, links: document.getElementById("ln").value.trim().slice(0, 1500), trusted: e.isTrusted });
   document.getElementById("msg").textContent = "감사합니다. 확인 후 등록 안내를 드리겠습니다.";
   document.querySelector("#f .btn").disabled = true;
