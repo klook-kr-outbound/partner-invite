@@ -127,7 +127,7 @@ textarea{resize:vertical;min-height:96px;line-height:1.5}
 @media (prefers-reduced-motion: no-preference){ .cta{transition:transform .08s} }
 
 /* ---- 메일 회신 선택 패널 (?a=yes|call|later) ---- */
-.rp{max-width:560px;margin:0 auto;padding:20px 16px 0}
+.rp{position:relative;z-index:3;max-width:560px;margin:0 auto;padding:20px 16px 104px}
 .rp[hidden]{display:none}
 .rpc{background:#fff;border:2px solid #FF5B00;border-radius:16px;padding:22px 18px;box-shadow:0 6px 24px rgba(255,91,0,.12)}
 .rpc h2{margin:0 0 6px;font-size:19px;color:#222}
@@ -136,6 +136,10 @@ textarea{resize:vertical;min-height:96px;line-height:1.5}
 .rpb button,.rpf button{font:inherit;font-weight:700;font-size:15px;padding:13px 14px;border-radius:12px;border:1.5px solid #FF5B00;background:#fff;color:#FF5B00;cursor:pointer;text-align:left}
 .rpb button:hover,.rpf button.pri{background:#FF5B00;color:#fff}
 .rpf{display:grid;gap:8px;margin-top:6px}
+.rpf[hidden],.rpb:empty{display:none}
+.rpf>div{display:grid;gap:8px}
+.rpf>div[hidden]{display:none}
+.rpf button.pri{background:#FF5B00;color:#fff;text-align:center}
 .rpf label{font-size:13px;color:#555;font-weight:700}
 .rpf input,.rpf select{font:inherit;padding:11px;border:1px solid #cbd5e0;border-radius:10px;width:100%;box-sizing:border-box}
 .rpm{margin:12px 0 0;font-weight:700;color:#FF5B00}
@@ -319,7 +323,7 @@ if (NAME) document.getElementById("who").textContent = NAME + " 대표님";
 /* 국가: ?c=ES 처럼 코드를 붙이면 제목에 국가명이 들어갑니다. 코드가 없으면 국가 표기 없이 공통 문구로 보입니다. */
 var COUNTRIES = { ES: "스페인", IT: "이탈리아", FR: "프랑스", GB: "영국", UK: "영국", DE: "독일", CH: "스위스", AT: "오스트리아", PT: "포르투갈", GR: "그리스", TR: "튀르키예", CZ: "체코", HU: "헝가리", NL: "네덜란드", HR: "크로아티아", BE: "벨기에", DK: "덴마크", NO: "노르웨이", SE: "스웨덴", FI: "핀란드", IS: "아이슬란드", IE: "아일랜드", PL: "폴란드", MA: "모로코", EG: "이집트", US: "미국", CA: "캐나다", AU: "호주", NZ: "뉴질랜드" };
 var CC = (qs.get("c") || "").toUpperCase().slice(0, 2);
-if (COUNTRIES[CC]) document.getElementById("cn").textContent = COUNTRIES[CC] + " ";
+/* 전 세계 한국어 투어 파트너 공통 문구: 제목에는 국가명을 넣지 않습니다 (국가 코드는 포털 utm_term 추적에만 사용) */
 
 /* 포털 링크: UTM + ref 부착 (포털이 무시해도 가입 페이지는 정상 열림) */
 var portal = new URL(CONFIG.PORTAL_URL);
