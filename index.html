@@ -125,6 +125,20 @@ textarea{resize:vertical;min-height:96px;line-height:1.5}
 .lbw{flex:1;overflow:auto;padding:0 12px max(24px,env(safe-area-inset-bottom));display:flex;justify-content:center;align-items:flex-start}
 .lbw img{max-width:100%;height:auto;border-radius:10px;background:#fff}
 @media (prefers-reduced-motion: no-preference){ .cta{transition:transform .08s} }
+
+/* ---- 메일 회신 선택 패널 (?a=yes|call|later) ---- */
+.rp{max-width:560px;margin:0 auto;padding:20px 16px 0}
+.rp[hidden]{display:none}
+.rpc{background:#fff;border:2px solid #FF5B00;border-radius:16px;padding:22px 18px;box-shadow:0 6px 24px rgba(255,91,0,.12)}
+.rpc h2{margin:0 0 6px;font-size:19px;color:#222}
+.rps{margin:0 0 14px;color:#666;font-size:14px;line-height:1.6}
+.rpb{display:flex;flex-direction:column;gap:8px}
+.rpb button,.rpf button{font:inherit;font-weight:700;font-size:15px;padding:13px 14px;border-radius:12px;border:1.5px solid #FF5B00;background:#fff;color:#FF5B00;cursor:pointer;text-align:left}
+.rpb button:hover,.rpf button.pri{background:#FF5B00;color:#fff}
+.rpf{display:grid;gap:8px;margin-top:6px}
+.rpf label{font-size:13px;color:#555;font-weight:700}
+.rpf input,.rpf select{font:inherit;padding:11px;border:1px solid #cbd5e0;border-radius:10px;width:100%;box-sizing:border-box}
+.rpm{margin:12px 0 0;font-weight:700;color:#FF5B00}
 </style>
 </head>
 <body>
@@ -146,6 +160,18 @@ textarea{resize:vertical;min-height:96px;line-height:1.5}
     <button id="later" class="later" type="button">지금은 어렵고, 나중에 볼게요</button>
   </div>
 </header>
+<section id="rp" class="rp" hidden aria-live="polite"><div class="rpc">
+  <h2 id="rpT"></h2><p id="rpS" class="rps"></p>
+  <div id="rpB" class="rpb"></div>
+  <form id="rpF" class="rpf" hidden>
+    <label id="rpL1" for="rpC">연락처</label><input id="rpC" required>
+    <div id="rpX"><label for="rpH">선호 채널</label><select id="rpH"><option>전화</option><option>카톡</option><option>이메일</option></select>
+    <label for="rpD">편한 시간대 (한국 시간)</label><select id="rpD"><option>상관없음</option><option>오전</option><option>오후</option></select></div>
+    <button class="pri" type="submit">보내기</button>
+  </form>
+  <p id="rpM" class="rpm" role="status"></p>
+</div></section>
+
 
 <main>
   <div class="col">
@@ -404,6 +430,64 @@ Array.prototype.forEach.call(document.querySelectorAll(".faq details"), function
 Array.prototype.forEach.call(document.querySelectorAll("a[data-faq]"), function (a) {
   a.addEventListener("click", function () { var d = document.getElementById(a.getAttribute("data-faq")); if (d) d.open = true; });
 });
+
+/* ============ 메일 회신 선택 패널: ?a=yes | call | later ============ */
+(function () {
+  var A = (qs.get("a") || "").toLowerCase();
+  if (["yes", "call", "later"].indexOf(A) < 0) return;
+  var $ = function (id) { return document.getElementById(id); };
+  var box = $("rp"), B = $("rpB"), F = $("rpF"), M = $("rpM");
+  function pick(label, e, extra) {
+    var human = !e || (e.isTrusted && ms() >= 800);
+    log("reply_choice", Object.assign({ label: label + (human ? "" : "(suspect)"), trusted: e ? e.isTrusted : true }, extra || {}));
+  }
+  function btns(list, fn) {
+    B.innerHTML = "";
+    list.forEach(function (o) {
+      var b = document.createElement("button"); b.type = "button"; b.textContent = o[1];
+      b.addEventListener("click", function (e) { fn(o[0], e); }); B.appendChild(b);
+    });
+  }
+  function done(msg) { B.innerHTML = ""; F.hidden = true; M.textContent = msg; }
+  function form(label, key, needX) {
+    B.innerHTML = ""; F.hidden = false; $("rpL1").textContent = label; $("rpX").hidden = !needX;
+    $("rpC").type = key === "email" ? "email" : "text";
+    F.onsubmit = function (e) {
+      e.preventDefault();
+      var v = $("rpC").value.trim(); if (!v) return;
+      pick(key === "email" ? "yes:material" : "call:request", e, { email: v, links: needX ? ("채널=" + $("rpH").value + "; 시간=" + $("rpD").value) : "" });
+      done(key === "email" ? "감사합니다. 입력하신 메일로 안내 자료를 보내드리겠습니다." : "감사합니다. 영업일 기준 1일 이내에 연락드리겠습니다.");
+    };
+  }
+  box.hidden = false;
+  log("reply_open", { label: A });
+  if (A === "yes") {
+    $("rpT").textContent = "관심 가져주셔서 감사합니다";
+    $("rpS").textContent = "어떤 도움이 필요하신가요? 하나만 골라 주세요.";
+    btns([["go_now", "지금 바로 가입할게요"], ["material", "입점 안내 자료를 메일로 받고 싶어요"], ["how", "상품 등록 절차를 더 알아볼게요"]], function (k, e) {
+      if (k === "material") { form("안내 자료를 받을 이메일", "email", false); return; }
+      pick("yes:" + k, e);
+      if (k === "go_now") { done("아래 '파트너 가입하기' 버튼으로 시작해 주세요."); $("go").scrollIntoView({ behavior: "smooth", block: "center" }); }
+      else { done("아래 입점 디렉토리에서 단계별 안내를 확인해 주세요."); var d = $("dir"); if (d) d.scrollIntoView({ behavior: "smooth" }); }
+    });
+  } else if (A === "call") {
+    $("rpT").textContent = "먼저 설명을 들어보고 싶으시군요";
+    $("rpS").textContent = "편하신 연락처를 남겨 주시면 클룩 한국 사업개발팀이 직접 연락드립니다.";
+    form("연락처 (전화번호 또는 카톡 ID)", "contact", true);
+  } else {
+    $("rpT").textContent = "알려주셔서 감사합니다";
+    $("rpS").textContent = "가장 가까운 이유를 하나만 골라 주세요. 이후 연락에 참고하겠습니다.";
+    btns([["timing", "지금은 시기가 맞지 않아요"], ["fee", "수수료가 부담돼요"], ["other_platform", "이미 다른 플랫폼으로 충분해요"], ["no", "관심이 없어요"]], function (k, e) {
+      pick("later:" + k, e);
+      if (k === "no") { done("알겠습니다. 추가 연락을 드리지 않겠습니다. 감사합니다."); return; }
+      $("rpS").textContent = "언제쯤 다시 안내드릴까요?";
+      btns([["1m", "한 달 뒤에 다시 안내해 주세요"], ["ny", "내년 초에 다시 안내해 주세요"], ["none", "다시 연락 안 주셔도 돼요"]], function (w, e2) {
+        pick("later:when:" + w, e2);
+        done(w === "none" ? "알겠습니다. 감사합니다." : "알겠습니다. 말씀하신 시기에 다시 안내드리겠습니다.");
+      });
+    });
+  }
+})();
 </script>
 </body>
 </html>
